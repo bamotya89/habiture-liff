@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>自分トリセツ診断 | Habiture</title>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --primary: #3d7a5a;
+            --primary-light: #e8f5ee;
+            --accent: #e8a87c;
+            --accent-light: #fdf3ea;
+            --bg: #faf9f7;
+            --text: #2c2c2c;
+            --muted: #7a7069;
+            --border: #e0d8d0;
+            --white: #ffffff;
+            --danger-light: #fdf0f0;
+            --danger: #c0392b;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
+            min-height: 100vh;
+            padding-bottom: 56px;
+        }
+
+        /* ── Header ── */
+        .header {
+            background: var(--primary);
+            color: white;
+            text-align: center;
+            padding: 18px 24px 22px;
+        }
+        .header-logo { font-size: 10px; letter-spacing: 4px; opacity: 0.6; margin-bottom: 5px; }
+        .header-title { font-size: 17px; font-weight: 700; letter-spacing: 1px; }
+
+        /* ── Progress ── */
+        .progress-wrap { padding: 16px 24px 0; }
+        .progress-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .progress-label { font-size: 12px; color: var(--muted); }
+        .progress-dots {
+            display: flex;
+            gap: 4px;
+        }
+        .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--border);
+            transition: background 0.3s;
+        }
+        .dot.done { background: var(--primary); }
+        .dot.active { background: var(--accent); }
+        .progress-bar { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+        .progress-fill { height: 100%; background: var(--primary); border-radius: 2px; transition: width 0.4s ease; }
+
+        /* ── Question ── */
+        .question-wrap { padding: 28px 24px 0; }
+        .question-num {
+            font-size: 10px; color: var(--primary);
+            letter-spacing: 3px; font-weight: 600;
+            margin-bottom: 10px;
+        }
+        .question-text {
+            font-size: 17px; font-weight: 700;
+            line-height: 1.65; margin-bottom: 24px;
+        }
+        .choices { display: flex; flex-direction: column; gap: 11px; }
+        .choice-btn {
+            width: 100%;
+            background: var(--white);
+            border: 1.5px solid var(--border);
+            border-radius: 12px;
+            padding: 15px 18px;
+            text-align: left;
+            font-size: 14px;
+            line-height: 1.6;
+            color: var(--text);
+            cursor: pointer;
+            display: flex;
+            align-items: flex-start;
+            gap: 11px;
+            -webkit-tap-highlight-color: transparent;
+            transition: background 0.12s, border-color 0.12s, transform 0.1s;
+        }
+        .choice-btn:active {
+            background: var(--primary-light);
+            border-color: var(--primary);
+            transform: scale(0.98);
+        }
+        .choice-label {
+            font-weight: 700;
+            color: var(--primary);
+            min-width: 16px;
+            font-size: 13px;
+            padding-top: 1px;
+            flex-shrink: 0;
+        }
+
+        /* ── Loading ── */
+        .loading { text-align: center; padding: 80px 24px; }
+        .spinner {
+            width: 36px; height: 36px;
+            border: 3px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 16px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── Intro ── */
+        .intro-wrap { padding: 32px 24px; }
+        .intro-body {
+            font-size: 15px; line-height: 2.0;
+            color: var(--text); margin-bottom: 24px;
+        }
+        .intro-body strong { color: var(--primary); }
+        .intro-time {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px 16px;
+            margin-bottom: 28px;
+            font-size: 13px;
+            color: var(--muted);
+            line-height: 1.7;
+        }
+        .intro-time-icon { font-size: 18px; flex-shrink: 0; }
+        .start-btn {
+            display: block; width: 100%;
+            background: var(--primary); color: white;
+            border: none; border-radius: 12px;
+            padding: 18px;
+            font-size: 17px; font-weight: 700;
+            cursor: pointer; letter-spacing: 1px;
+        }
+
+        /* ── Result ── */
+        .result-wrap { padding: 24px 24px 0; }
+        .result-hero {
+            background: var(--primary); color: white;
+            border-radius: 16px;
+            padding: 28px 24px 30px;
+            text-align: center;
+            margin-bottom: 18px;
+        }
+        .result-icon { font-size: 52px; margin-bottom: 10px; line-height: 1; }
+        .result-tag {
+            display: inline-block;
+            font-size: 10px; letter-spacing: 3px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 20px;
+            padding: 3px 12px;
+            margin-bottom: 10px;
+        }
+        .result-type-name { font-size: 22px; font-weight: 800; margin-bottom: 3px; }
+        .result-sub { font-size: 12px; opacity: 0.7; letter-spacing: 1.5px; }
+
+        .result-card {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 14px;
+        }
+        .card-title {
+            font-size: 10px;
+            color: var(--primary);
+            letter-spacing: 3px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+        .card-body { font-size: 14px; line-height: 1.9; }
+
+        .anaru-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .anaru-item {
+            display: flex;
+            gap: 10px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .anaru-check {
+            color: var(--primary);
+            font-weight: 700;
+            flex-shrink: 0;
+            padding-top: 1px;
+        }
+
+        .weapon-box {
+            background: var(--primary-light);
+            border-radius: 8px;
+            padding: 14px 16px;
+            font-size: 14px;
+            line-height: 1.75;
+            font-weight: 500;
+        }
+
+        .pitfall-box {
+            background: var(--accent-light);
+            border-left: 3px solid var(--accent);
+            border-radius: 0 8px 8px 0;
+            padding: 14px 16px;
+            font-size: 14px;
+            line-height: 1.75;
+        }
+        .pitfall-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: #b5651d;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+        }
+
+        .ineffective-list { display: flex; flex-direction: column; gap: 14px; }
+        .ineffective-advice {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--muted);
+            background: var(--bg);
+            border-radius: 6px;
+            padding: 8px 12px;
+            margin-bottom: 6px;
+            line-height: 1.5;
+        }
+        .ineffective-reason {
+            font-size: 13px;
+            line-height: 1.75;
+            color: var(--text);
+            padding: 0 4px;
+        }
+
+        .strategy-list { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+        .strategy-item { display: flex; gap: 12px; align-items: flex-start; }
+        .strategy-num {
+            width: 24px; height: 24px;
+            background: var(--primary); color: white;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 12px; font-weight: 700;
+            flex-shrink: 0; margin-top: 1px;
+        }
+        .strategy-text { font-size: 14px; line-height: 1.65; }
+        .strategy-name { font-weight: 700; color: var(--primary); }
+        .strategy-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+        /* ── CTA ── */
+        .cta-wrap { padding: 4px 24px 0; }
+        .cta-note {
+            font-size: 13px; color: var(--muted);
+            text-align: center; line-height: 1.85;
+            margin-bottom: 16px;
+        }
+        .cta-btn {
+            display: block; width: 100%;
+            background: var(--primary); color: white;
+            border: none; border-radius: 12px;
+            padding: 18px;
+            font-size: 16px; font-weight: 700;
+            cursor: pointer; letter-spacing: 0.5px;
+        }
+        .cta-btn:disabled { opacity: 0.6; }
+        .sent-msg {
+            text-align: center; font-size: 14px;
+            color: var(--primary);
+            padding: 12px;
+            background: var(--primary-light);
+            border-radius: 8px; margin-top: 12px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div class="header-logo">HABITURE</div>
+    <div class="header-title">自分トリセツ診断</div>
+</div>
+
+<div id="app">
+    <div class="loading">
+        <div class="spinner"></div>
+        <p style="color:var(--muted);font-size:14px;">読み込み中...</p>
+    </div>
+</div>
+
+<script>
+// ============================================================
+// 設定（デプロイ時に変更してください）
+// ============================================================
+const LIFF_ID = 'YOUR_LIFF_ID';
+const GAS_URL = 'YOUR_GAS_URL';
+
+// ============================================================
+// 診断データ（10問）
+// ============================================================
+const questions = [
+    {
+        text: '新しいことを始める時、自然とやっていることは？',
+        choices: [
+            { label: 'A', text: 'まず全体像を把握して、詳細な計画やスケジュールを立てる' },
+            { label: 'B', text: '一緒に頑張れる仲間を探したり、周りに「始めます！」と宣言する' },
+            { label: 'C', text: '達成した時の気分やご褒美を具体的に想像する' },
+            { label: 'D', text: '一番簡単そうなことからすぐ手をつけて「やった」という事実を作る' }
+        ]
+    },
+    {
+        text: 'ちょっと面倒な作業に取り掛かる時、自分に効くのは？',
+        choices: [
+            { label: 'A', text: '作業を細かく分解してチェックリストを作り、一つずつ消していく' },
+            { label: 'B', text: '「これが終わったら報告する」と誰かと約束する' },
+            { label: 'C', text: '「終わったら〇〇を食べる/見る」という魅力的なご褒美を設定する' },
+            { label: 'D', text: '「まず5分だけ」とタイマーをセットして、何も考えずに体を動かし始める' }
+        ]
+    },
+    {
+        text: '頑張りを最も加速させるフィードバックは？',
+        choices: [
+            { label: 'A', text: '「進捗率80%」「先週比10%アップ」といった客観的な数字やデータ' },
+            { label: 'B', text: '仲間からの「すごい！」「頑張ってるね！」という応援やリアクション' },
+            { label: 'C', text: '「これをやってる時の自分、好きだな」という自分自身のポジティブな感覚' },
+            { label: 'D', text: '「完了！」というシンプルな達成通知や、こなした数の積み上がり' }
+        ]
+    },
+    {
+        text: '気づいたら時間を忘れて没頭していた。それはどんな場面？',
+        choices: [
+            { label: 'A', text: '複雑な計画や仕組みを、一つひとつ整理してピタリとはまった時' },
+            { label: 'B', text: '誰かと話したり、一緒に何かを作り上げている時' },
+            { label: 'C', text: '自分の好きなものに囲まれて、自由に創っている時' },
+            { label: 'D', text: 'とにかく手を動かして、タスクを次々とこなしている時' }
+        ]
+    },
+    {
+        text: '「また続かなかった」原因として、最も心当たりがあるのは？',
+        choices: [
+            { label: 'A', text: '計画が一度崩れて、どこから再開すればいいかわからなくなった' },
+            { label: 'B', text: '一緒にやる人がいなくなり、一人で続ける気力が湧かなかった' },
+            { label: 'C', text: '楽しくなくなり、やっていても気分が全く上がらなくなった' },
+            { label: 'D', text: '効果が見えず、やっている意味を感じられなくなった' }
+        ]
+    },
+    {
+        text: '目標を立てる時、自然とやってしまうのは？',
+        choices: [
+            { label: 'A', text: '目標を段階に分解し、期間と達成基準を細かく設定する' },
+            { label: 'B', text: '誰かに目標を話して、「一緒にやろう」「応援するよ」という関係を作る' },
+            { label: 'C', text: '「これが叶ったら最高だな」という理想の未来イメージを膨らませる' },
+            { label: 'D', text: 'とりあえず「最初の一歩」だけ決めて、あとは動きながら考える' }
+        ]
+    },
+    {
+        text: '朝、行動を始める前に「ひと押し」が欲しい時、何が効く？',
+        choices: [
+            { label: 'A', text: '昨日の進捗と今日のタスクリストを確認して、「今日はここまで」と決める' },
+            { label: 'B', text: '信頼できる人のメッセージや、誰かが頑張っている様子を見る' },
+            { label: 'C', text: 'お気に入りの音楽、コーヒー、香りなど「自分だけの儀式」を行う' },
+            { label: 'D', text: '「10秒で動く」と決めて、余計なことを考える前に体を動かし始める' }
+        ]
+    },
+    {
+        text: '理想の「学び方」に最も近いのは？',
+        choices: [
+            { label: 'A', text: '体系化された本や講座で、仕組みや全体像から順番に理解する' },
+            { label: 'B', text: '勉強会やコミュニティで、他の人と話しながら理解を深める' },
+            { label: 'C', text: '自分の興味の赴くままに、面白そうな部分をつまみ食いしながら学ぶ' },
+            { label: 'D', text: 'まず実践して、必要な知識はその都度調べながら身につける' }
+        ]
+    },
+    {
+        text: '「やろうと思っていたのにできなかった」そんな夜、あなたはどうする？',
+        choices: [
+            { label: 'A', text: '何が原因だったか振り返り、明日の計画を修正して寝る' },
+            { label: 'B', text: '誰かに「今日ダメだった」と話して、気持ちをリセットする' },
+            { label: 'C', text: '「まあいっか」と切り替えて、好きなことで気分転換してから寝る' },
+            { label: 'D', text: '「明日は絶対やる」とだけ決めて、さっさと寝る' }
+        ]
+    },
+    {
+        text: '習慣が「自分に合っている」と感じる瞬間は？',
+        choices: [
+            { label: 'A', text: '記録を見返して、着実に積み上がっていることがデータで確認できた時' },
+            { label: 'B', text: '同じことに取り組む仲間の存在を感じ、「一人じゃない」と思えた時' },
+            { label: 'C', text: '「これ、好きだな」という感覚があり、やっていて心地よい時' },
+            { label: 'D', text: '「また一個できた」という小さな達成感が、毎日積み重なっている時' }
+        ]
+    }
+];
+
+// ============================================================
+// 診断結果（4タイプ）
+// ============================================================
+const results = {
+    A: {
+        icon: '🗺️',
+        typeName: '計画家・設計者タイプ',
+        subName: '戦略家',
+        desc: '「うまくいかない原因を突き止めたい」「再現できる仕組みを作りたい」——その衝動があなたの原動力です。一度理解した仕組みを徹底的に活用できる、強いタイプです。',
+        anaru: [
+            '同じ習慣を、何度も1からリセットして始め直した経験がある',
+            '習慣アプリより、自分でカスタマイズした管理シートの方がしっくりくる',
+            '始める前に全体設計をしないと、なんとなく落ち着かない',
+            '計画を立てている時間が、実は一番楽しいと感じる'
+        ],
+        weapon: '混沌とした状況を、誰もが理解できる「地図」や「設計図」に落とし込む力',
+        pitfall: '計画が1度崩れると「全部やり直し」モードに入りがち。完璧な状態が揃うまで動けなくなることがある。',
+        ineffective: [
+            {
+                advice: '「完璧を目指すな、とにかく始めろ」',
+                reason: '計画を立てることはあなたにとって「安心して動くための地図」を描く行為。「地図なしで走れ」は不安を増やすだけで、このタイプには逆効果になる。'
+            },
+            {
+                advice: '「毎日同じルーティンにするだけでいい」',
+                reason: 'シンプルすぎる設計は物足りなさを生む。あなたには「なぜこの順番か」「どう改善できるか」という設計の余地が必要。'
+            }
+        ],
+        strategies: [
+            {
+                name: '崩れ前提の計画術',
+                text: '週1回「修正の時間」を計画に組み込む。崩れた翌日に「再起動プラン」を1行書くだけでOK。',
+                sub: 'なぜ効くか：崩れを「失敗」ではなく「修正イベント」と定義することで、完璧主義の罠を構造的に回避できる'
+            },
+            {
+                name: '習慣トラッカー×週次レビュー',
+                text: '毎週末に記録を5分だけ振り返る。「先週より1つ多くできた」という数字が最高のエネルギー源になる。',
+                sub: 'なぜ効くか：数値化された成長が次の行動への強化学習として機能する（行動強化の原理）'
+            },
+            {
+                name: 'if-thenプランニング',
+                text: '「〇〇になったら△△する」で行動を決める。例：「帰宅して荷物を置いたら、そのままシューズを履く」',
+                sub: 'なぜ効くか：行動のトリガーを事前設定することで、その場での意志力消費をゼロにできる（実施意図の原理）'
+            }
+        ],
+        lineMessage: `🗺️ あなたは「計画家・設計者タイプ」です！
+
+【こんな人です】
+✔ 同じ習慣を何度もリセットして始め直した経験がある
+✔ 始める前に全体設計をしないと落ち着かない
+✔ 計画を立てている時間が実は一番楽しい
+
+【あなたの武器】
+混沌を「地図」に落とし込む力。
+ズレを分析して仕組みを改善し続けられるのは、このタイプだけ。
+
+【効かなかった定番アドバイスの理由】
+「完璧を目指すな、とにかく始めろ」→ 計画はあなたの「安心して動くための地図」。それを否定する設計は逆効果。
+
+【おすすめの習慣化戦略3選】
+① 崩れ前提の計画術：崩れを失敗でなく「修正イベント」として設計する
+② 習慣トラッカー×週次レビュー：数字の積み上がりが最高のエネルギー源
+③ if-thenプランニング：トリガーを事前設定して意志力消費をゼロにする
+
+この結果は、あなたのトリセツの最初の1ページ。
+続きが気になる方は「講座」と送ってください📩`
+    },
+
+    B: {
+        icon: '🤝',
+        typeName: '交流家・巻き込みタイプ',
+        subName: 'コミュニケーター',
+        desc: '「一人でやると続かないのに、誰かと一緒だと不思議と続く」——この経験はあなたの弱点ではありません。社会的なつながりを燃料にして動けるのは、このタイプ固有の才能です。',
+        anaru: [
+            'ダイエットも勉強も、一人より誰かと一緒の方が格段に続く',
+            'グループチャットで進捗を報告したら、急にやる気が湧いた経験がある',
+            '誰かに話しながら考えると、一人で考えるより早く整理される',
+            '応援してくれる人がいなくなったタイミングで、習慣も止まった'
+        ],
+        weapon: '「応援される力」と「応援する力」。関係性をエネルギーに変える才能',
+        pitfall: '応援がない日に動けなくなりやすい。「一人になると続かない」という状況に陥ることがある。',
+        ineffective: [
+            {
+                advice: '「他人の目を気にせず、自分のためだけに続けろ」',
+                reason: 'あなたにとって「他者の存在」はモチベーションの邪魔ではなく、行動に必要な燃料。その燃料をわざわざ断つ必要はない。'
+            },
+            {
+                advice: '「一人でも続けられる強い意志を持て」',
+                reason: '意志力で補おうとする方向より、「人を巻き込む仕組み」を作る方向の方が、あなたには10倍速い。'
+            }
+        ],
+        strategies: [
+            {
+                name: '公開宣言×報告ループ',
+                text: 'SNSやLINEに「〇〇を始めます」と宣言してから始める。毎日1行でいいので、誰かに進捗を報告する仕組みを作る。',
+                sub: 'なぜ効くか：宣言による社会的コミットメントが「やらない言い訳」のコストを上げる（コミットメント効果）'
+            },
+            {
+                name: '習慣仲間をつくる',
+                text: '「みんチャレ」などのアプリで同じ目標の人と繋がる。週1回共有できる相手がいるだけで、継続率が劇的に変わる。',
+                sub: 'なぜ効くか：他者の行動が自分の行動の基準を自然に引き上げる（社会的比較の原理）'
+            },
+            {
+                name: '「報告相手」を1人固定する',
+                text: '毎日同じ1人に「今日やったこと」を一言送る。返信はなくていい。「見ている人がいる」という感覚だけで十分機能する。',
+                sub: 'なぜ効くか：想定される観察者の存在が、一人でいる時の行動にも影響を与える'
+            }
+        ],
+        lineMessage: `🤝 あなたは「交流家・巻き込みタイプ」です！
+
+【こんな人です】
+✔ ダイエットも勉強も、一人より誰かと一緒の方が格段に続く
+✔ 誰かに話しながら考えると、一人より早く整理される
+✔ 応援してくれる人がいなくなったタイミングで習慣も止まった
+
+【あなたの武器】
+「応援される力」と「応援する力」。
+関係性をエネルギーに変えられるのはこのタイプだけ。
+
+【効かなかった定番アドバイスの理由】
+「他人の目を気にせず自分のためだけに続けろ」→ あなたには他者の存在が必要な燃料。断つ理由はない。
+
+【おすすめの習慣化戦略3選】
+① 公開宣言×報告ループ：コミットメント効果で「やらない言い訳」コストを上げる
+② 習慣仲間をつくる：他者の行動が自分の基準を自然に引き上げる
+③ 「報告相手」を1人固定する：見ている人がいる感覚だけで十分機能する
+
+この結果は、あなたのトリセツの最初の1ページ。
+続きが気になる方は「講座」と送ってください📩`
+    },
+
+    C: {
+        icon: '🎨',
+        typeName: '感覚派・ご褒美タイプ',
+        subName: 'アーティスト',
+        desc: '「楽しくないとできない」——それは怠惰ではなく、感情の変化に敏感なセンサーを持っているということ。そのセンサーを正しく使えば、無理なく継続できる設計が作れます。',
+        anaru: [
+            'お気に入りの場所や音楽があると、驚くほど集中力が変わる',
+            '義務感でやっていた習慣は、気づいたらいつの間にかやめていた',
+            '乗っている日とそうでない日のパフォーマンスの差が、他の人より大きい',
+            '楽しさを感じなくなった瞬間に、スパッと止まってしまう'
+        ],
+        weapon: '自分の「ごきげん」を察知し、それを原動力に変える感情センサー',
+        pitfall: '「やる気が出るまで待つ」モードに入ると、気づいたら何週間も経っていることがある。',
+        ineffective: [
+            {
+                advice: '「感情に左右されるな、機械的に毎日こなせ」',
+                reason: 'あなたの感情センサーは欠点ではなく資産。それを封じようとする設計は長続きしない。センサーをうまく使う設計の方が正しい。'
+            },
+            {
+                advice: '「毎日同じ時間に同じことをすれば自動化される」',
+                reason: '硬直したルーティンはこのタイプには窮屈すぎる。気分の波に乗れる「ゆるい構造」の方が長く続く。'
+            }
+        ],
+        strategies: [
+            {
+                name: '行動バンドル（快感とセット化）',
+                text: '「〇〇をやる時だけ聴けるプレイリスト」を作る。好きな飲み物や空間と行動を一緒にする。',
+                sub: 'なぜ効くか：行動に快の刺激を紐づけることで、脳がその行動自体を「好き」なものとして学習する（古典的条件づけ）'
+            },
+            {
+                name: 'ごきげんトリガーを設計する',
+                text: '自分が動ける条件（時間帯・場所・気温・音）を書き出して、それを意図的に整える習慣を作る。気分は「待つもの」ではなく「作るもの」。',
+                sub: 'なぜ効くか：環境が行動を誘発する力は、意志力より圧倒的に強い（環境設計の原理）'
+            },
+            {
+                name: '「最小限OK」ルール',
+                text: '気分が乗らない日は「1分だけ」「1行だけ」を正式な完了基準にする。ゼロを防ぐことで翌日の再開コストを最小化できる。',
+                sub: 'なぜ効くか：習慣の連続性を保つことで、再起動に必要なエネルギーが大幅に下がる'
+            }
+        ],
+        lineMessage: `🎨 あなたは「感覚派・ご褒美タイプ」です！
+
+【こんな人です】
+✔ お気に入りの場所・音楽があると驚くほど集中力が変わる
+✔ 義務感でやっていた習慣は、気づいたらやめていた
+✔ 楽しさを感じなくなった瞬間にスパッと止まってしまう
+
+【あなたの武器】
+自分の「ごきげん」を察知し、それを原動力に変える感情センサー。
+感情センサーは欠点ではなく、使い方がある資産。
+
+【効かなかった定番アドバイスの理由】
+「感情に左右されるな、機械的にこなせ」→ センサーを封じる設計は長続きしない。センサーを活かす設計が正解。
+
+【おすすめの習慣化戦略3選】
+① 行動バンドル：行動に「好き」をセット化する（古典的条件づけ）
+② ごきげんトリガーを設計する：気分は待つものではなく作るもの
+③ 「最小限OK」ルール：乗らない日はゼロを防ぐだけを目標にする
+
+この結果は、あなたのトリセツの最初の1ページ。
+続きが気になる方は「講座」と送ってください📩`
+    },
+
+    D: {
+        icon: '⚡',
+        typeName: '実践家・効率タイプ',
+        subName: 'スプリンター',
+        desc: '考える前に体が動いている——その即行動力は、どのタイプにも真似できない才能です。あなたの課題は「始めること」ではなく、「止まった後に再び動き出すこと」の設計にあります。',
+        anaru: [
+            '新しい習慣を始めるのは誰より早いが、3週間後に続いているかは別の話',
+            '複数のことを同時に始めて、全部が中途半端になった経験が何度もある',
+            '一気に頑張りすぎて燃え尽き、しばらく何もできなくなった',
+            '止まっている間に「もういいか」という気持ちが積み重なって再開が難しくなる'
+        ],
+        weapon: '行動へのハードルの低さと、驚異的な実行スピード。やるかやらないかを迷わない判断力',
+        pitfall: '複数の習慣を同時に始めて全部続かなくなるパターンと、一気にやりすぎてのバーンアウトに陥りやすい。',
+        ineffective: [
+            {
+                advice: '「まず計画を立ててから始めろ」',
+                reason: '計画段階でエネルギーが尽きやすいのがこのタイプ。まず1回動いて感触を確かめてから整える方があなたには合っている。'
+            },
+            {
+                advice: '「焦らずゆっくりペースを保て」',
+                reason: 'あなたの「一気にやる」は欠点ではなく才能。問題はその後の設計。燃え尽きた後の「再起動の仕組み」を作ることが本質。'
+            }
+        ],
+        strategies: [
+            {
+                name: '最小化×1習慣集中',
+                text: '同時に始める習慣は必ず1つ。その1つを「腕立て1回」「日記1行」レベルまで小さくする。小さすぎると感じるくらいが正解。',
+                sub: 'なぜ効くか：ハードルを下げすぎることで「やらない理由」を消す。小さな完了の積み上げが脳の達成回路を強化する'
+            },
+            {
+                name: '完了記録を作る',
+                text: '「できた日」をカレンダーや手帳に記録する。連続記録が更新されていく感覚が、このタイプには想定以上のモチベーションになる。',
+                sub: 'なぜ効くか：「連続を途切れさせたくない」という心理が継続の強力なエンジンになる（損失回避の原理）'
+            },
+            {
+                name: '再起動プランを先に決める',
+                text: '「3日以上空いたら翌日1分だけやる」というルールを、始める前に決めておく。失敗後の行動を事前設計しておくことが鍵。',
+                sub: 'なぜ効くか：挫折後の行動を事前に決めておくと、挫折の連鎖を1回で止められる（実施意図の原理）'
+            }
+        ],
+        lineMessage: `⚡ あなたは「実践家・効率タイプ」です！
+
+【こんな人です】
+✔ 新しい習慣を始めるのは誰より早いが、3週間後は別の話
+✔ 複数のことを同時に始めて全部中途半端になったことが何度もある
+✔ 止まっている間に「もういいか」が積み重なって再開が難しくなる
+
+【あなたの武器】
+行動へのハードルの低さと、驚異的な実行スピード。
+「やるかどうか迷わない」のはこのタイプだけ。
+
+【効かなかった定番アドバイスの理由】
+「まず計画を立ててから始めろ」→ 計画段階でエネルギーが尽きやすいのがこのタイプ。まず動いて後から整える方が合っている。
+
+【おすすめの習慣化戦略3選】
+① 最小化×1習慣集中：やらない理由を消して脳の達成回路を強化する
+② 完了記録を作る：連続を途切れさせたくない心理が強力なエンジンになる
+③ 再起動プランを先に決める：挫折後の行動を事前設計して連鎖を1回で止める
+
+この結果は、あなたのトリセツの最初の1ページ。
+続きが気になる方は「講座」と送ってください📩`
+    }
+};
+
+// ============================================================
+// State
+// ============================================================
+let currentQ = 0;
+let answers = { A: 0, B: 0, C: 0, D: 0 };
+let userId = null;
+
+// ============================================================
+// LIFF 初期化
+// ============================================================
+async function initLiff() {
+    try {
+        await liff.init({ liffId: LIFF_ID });
+        if (!liff.isLoggedIn()) {
+            liff.login();
+            return;
+        }
+        const profile = await liff.getProfile();
+        userId = profile.userId;
+    } catch (e) {
+        userId = null; // テスト時はnullのまま続行
+    }
+    showIntro();
+}
+
+// ============================================================
+// 画面描画
+// ============================================================
+function render(html) {
+    document.getElementById('app').innerHTML = html;
+}
+
+function showIntro() {
+    render(`
+        <div class="intro-wrap">
+            <p class="intro-body">
+                こんにちは、ひかりです。<br><br>
+                「続けようと思ったのに、また続かなかった」<br><br>
+                それ、<strong>意志の問題じゃない</strong>んです。<br>
+                自分に合った<strong>続け方のタイプ</strong>を知らなかっただけかもしれない。<br><br>
+                10問で、あなたの「得意な続け方」がわかります。
+            </p>
+            <div class="intro-time">
+                <span class="intro-time-icon">⏱</span>
+                <span>所要時間：約2〜3分<br>直感で選んでください。正解も不正解もありません。</span>
+            </div>
+            <button class="start-btn" onclick="startQuiz()">診断スタート →</button>
+        </div>
+    `);
+}
+
+function startQuiz() {
+    currentQ = 0;
+    answers = { A: 0, B: 0, C: 0, D: 0 };
+    showQuestion();
+}
+
+function buildDots() {
+    return questions.map((_, i) => {
+        let cls = 'dot';
+        if (i < currentQ) cls += ' done';
+        else if (i === currentQ) cls += ' active';
+        return `<div class="${cls}"></div>`;
+    }).join('');
+}
+
+function showQuestion() {
+    const q = questions[currentQ];
+    const progress = (currentQ / questions.length) * 100;
+
+    render(`
+        <div class="progress-wrap">
+            <div class="progress-row">
+                <span class="progress-label">Q${currentQ + 1} / ${questions.length}</span>
+                <div class="progress-dots">${buildDots()}</div>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" style="width:${progress}%"></div>
+            </div>
+        </div>
+        <div class="question-wrap">
+            <div class="question-num">Q U E S T I O N &nbsp; ${currentQ + 1}</div>
+            <div class="question-text">${q.text}</div>
+            <div class="choices">
+                ${q.choices.map(c => `
+                    <button class="choice-btn" onclick="answer('${c.label}')">
+                        <span class="choice-label">${c.label}</span>
+                        <span>${c.text}</span>
+                    </button>
+                `).join('')}
+            </div>
+        </div>
+    `);
+}
+
+function answer(label) {
+    answers[label]++;
+    currentQ++;
+    if (currentQ < questions.length) {
+        showQuestion();
+    } else {
+        showResult();
+    }
+}
+
+function getResultType() {
+    // 同点の場合は最初に多く選んだものを優先
+    const sorted = Object.entries(answers).sort((a, b) => b[1] - a[1]);
+    return sorted[0][0];
+}
+
+function showResult() {
+    const type = getResultType();
+    const r = results[type];
+
+    render(`
+        <div class="result-wrap">
+            <div class="result-hero">
+                <div class="result-icon">${r.icon}</div>
+                <div class="result-tag">あなたのタイプ</div>
+                <div class="result-type-name">${r.typeName}</div>
+                <div class="result-sub">${r.subName}</div>
+            </div>
+
+            <div class="result-card">
+                <div class="card-title">T Y P E</div>
+                <p class="card-body">${r.desc}</p>
+            </div>
+
+            <div class="result-card">
+                <div class="card-title">あるある</div>
+                <ul class="anaru-list">
+                    ${r.anaru.map(a => `
+                        <li class="anaru-item">
+                            <span class="anaru-check">✔</span>
+                            <span>${a}</span>
+                        </li>
+                    `).join('')}
+                </ul>
+            </div>
+
+            <div class="result-card">
+                <div class="card-title">あなたの武器</div>
+                <div class="weapon-box">🔑 ${r.weapon}</div>
+            </div>
+
+            <div class="result-card">
+                <div class="card-title">注意したい落とし穴</div>
+                <div class="pitfall-box">
+                    <div class="pitfall-label">⚠ PITFALL</div>
+                    ${r.pitfall}
+                </div>
+            </div>
+
+            <div class="result-card">
+                <div class="card-title">なぜあのアドバイスが効かなかったか</div>
+                <div class="ineffective-list">
+                    ${r.ineffective.map(item => `
+                        <div>
+                            <div class="ineffective-advice">${item.advice}</div>
+                            <div class="ineffective-reason">${item.reason}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+
+            <div class="result-card">
+                <div class="card-title">おすすめの習慣化戦略</div>
+                <ul class="strategy-list">
+                    ${r.strategies.map((s, i) => `
+                        <li class="strategy-item">
+                            <div class="strategy-num">${i + 1}</div>
+                            <div class="strategy-text">
+                                <div><span class="strategy-name">${s.name}：</span>${s.text}</div>
+                                <div class="strategy-sub">${s.sub}</div>
+                            </div>
+                        </li>
+                    `).join('')}
+                </ul>
+            </div>
+        </div>
+
+        <div class="cta-wrap">
+            <p class="cta-note">
+                これは、あなたのトリセツの最初の1ページ。<br>
+                続きを一緒に作りたい方へ。
+            </p>
+            <button id="cta-btn" class="cta-btn" onclick="sendAndClose('${type}')">
+                結果をLINEに保存して続きへ →
+            </button>
+            <div id="sent-status"></div>
+        </div>
+    `);
+}
+
+async function sendAndClose(typeCode) {
+    const btn = document.getElementById('cta-btn');
+    const status = document.getElementById('sent-status');
+
+    btn.disabled = true;
+    btn.textContent = '送信中...';
+
+    const sent = await sendResult(typeCode);
+
+    if (sent) {
+        status.innerHTML = '<div class="sent-msg">✅ LINEに結果を送りました！</div>';
+        setTimeout(() => {
+            try { liff.closeWindow(); } catch(e) {}
+        }, 1800);
+    } else {
+        status.innerHTML = '<div class="sent-msg" style="background:#fdf0f0;color:#c0392b">⚠ 送信できませんでした。LINEに戻って「講座」と送ってください。</div>';
+        btn.disabled = false;
+        btn.textContent = '結果をLINEに保存して続きへ →';
+    }
+}
+
+async function sendResult(typeCode) {
+    if (!userId || !GAS_URL || GAS_URL === 'YOUR_GAS_URL') return false;
+    try {
+        const res = await fetch(GAS_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId, typeCode })
+        });
+        return res.ok;
+    } catch (e) {
+        return false;
+    }
+}
+
+// 起動
+initLiff();
+</script>
+
+</body>
+</html>
