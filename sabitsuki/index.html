@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Life-OS 錆つき診断 | Habiture</title>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --primary: #3d5a78;
+            --primary-light: #e8eef5;
+            --accent: #c17f4a;
+            --accent-light: #faf0e6;
+            --bg: #f8f7f5;
+            --text: #2c2c2c;
+            --muted: #7a7069;
+            --border: #e0d8d0;
+            --white: #ffffff;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
+            min-height: 100vh;
+            padding-bottom: 56px;
+        }
+
+        .header {
+            background: var(--primary);
+            color: white;
+            text-align: center;
+            padding: 18px 24px 22px;
+        }
+        .header-logo { font-size: 10px; letter-spacing: 4px; opacity: 0.6; margin-bottom: 5px; }
+        .header-title { font-size: 17px; font-weight: 700; letter-spacing: 1px; }
+
+        .progress-wrap { padding: 16px 24px 0; }
+        .progress-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .progress-label { font-size: 12px; color: var(--muted); }
+        .progress-bar { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+        .progress-fill { height: 100%; background: var(--primary); border-radius: 2px; transition: width 0.4s ease; }
+
+        .question-wrap { padding: 28px 24px 0; }
+        .question-num {
+            font-size: 10px; color: var(--primary);
+            letter-spacing: 3px; font-weight: 600;
+            margin-bottom: 10px;
+        }
+        .question-text {
+            font-size: 16px; font-weight: 700;
+            line-height: 1.7; margin-bottom: 28px;
+        }
+
+        .scale-labels {
+            display: flex;
+            justify-content: space-between;
+            padding: 0 4px;
+            margin-bottom: 10px;
+        }
+        .scale-label-text {
+            font-size: 10px;
+            color: var(--muted);
+            text-align: center;
+            line-height: 1.4;
+            flex: 1;
+        }
+
+        .scale-btns {
+            display: flex;
+            gap: 8px;
+        }
+        .scale-btn {
+            flex: 1;
+            background: var(--white);
+            border: 1.5px solid var(--border);
+            border-radius: 12px;
+            padding: 16px 8px;
+            text-align: center;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            transition: background 0.12s, border-color 0.12s, transform 0.1s;
+        }
+        .scale-btn:active {
+            background: var(--primary-light);
+            border-color: var(--primary);
+            transform: scale(0.96);
+        }
+        .scale-num {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--primary);
+            display: block;
+        }
+
+        .loading { text-align: center; padding: 80px 24px; }
+        .spinner {
+            width: 36px; height: 36px;
+            border: 3px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 16px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .intro-wrap { padding: 32px 24px; }
+        .intro-body {
+            font-size: 15px; line-height: 2.0;
+            color: var(--text); margin-bottom: 24px;
+        }
+        .intro-body strong { color: var(--primary); }
+        .intro-time {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px 16px;
+            margin-bottom: 28px;
+            font-size: 13px;
+            color: var(--muted);
+            line-height: 1.7;
+        }
+        .intro-time-icon { font-size: 18px; flex-shrink: 0; }
+        .start-btn {
+            display: block; width: 100%;
+            background: var(--primary); color: white;
+            border: none; border-radius: 12px;
+            padding: 18px;
+            font-size: 17px; font-weight: 700;
+            cursor: pointer; letter-spacing: 1px;
+        }
+
+        /* Result */
+        .result-wrap { padding: 24px 24px 0; }
+        .result-hero {
+            background: var(--primary); color: white;
+            border-radius: 16px;
+            padding: 28px 24px 30px;
+            text-align: center;
+            margin-bottom: 18px;
+        }
+        .rust-level {
+            display: inline-block;
+            font-size: 11px; letter-spacing: 2px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 20px;
+            padding: 4px 14px;
+            margin-bottom: 12px;
+        }
+        .rust-score {
+            font-size: 13px; opacity: 0.75;
+            margin-bottom: 6px;
+        }
+        .rust-label {
+            font-size: 28px; font-weight: 800;
+            margin-bottom: 16px;
+        }
+        .type-divider {
+            border-top: 1px solid rgba(255,255,255,0.3);
+            padding-top: 16px;
+            margin-top: 4px;
+        }
+        .type-row {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+        .type-item { text-align: center; }
+        .type-tag {
+            font-size: 9px; letter-spacing: 2px; opacity: 0.6;
+            margin-bottom: 4px;
+        }
+        .type-name { font-size: 15px; font-weight: 700; }
+
+        .result-card {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 14px;
+        }
+        .card-title {
+            font-size: 10px;
+            color: var(--primary);
+            letter-spacing: 3px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+        .card-body { font-size: 14px; line-height: 1.9; }
+
+        .level-box {
+            background: var(--primary-light);
+            border-radius: 8px;
+            padding: 16px;
+            font-size: 14px;
+            line-height: 1.85;
+        }
+
+        .cta-wrap { padding: 4px 24px 0; }
+        .cta-note {
+            font-size: 13px; color: var(--muted);
+            text-align: center; line-height: 1.85;
+            margin-bottom: 16px;
+        }
+        .cta-highlight {
+            display: inline-block;
+            background: var(--accent-light);
+            border: 1px solid var(--accent);
+            border-radius: 8px;
+            padding: 10px 16px;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--accent);
+            margin: 8px 0 16px;
+        }
+        .cta-btn {
+            display: block; width: 100%;
+            background: var(--primary); color: white;
+            border: none; border-radius: 12px;
+            padding: 18px;
+            font-size: 16px; font-weight: 700;
+            cursor: pointer; letter-spacing: 0.5px;
+        }
+        .cta-btn:disabled { opacity: 0.6; }
+        .sent-msg {
+            text-align: center; font-size: 14px;
+            color: var(--primary);
+            padding: 12px;
+            background: var(--primary-light);
+            border-radius: 8px; margin-top: 12px;
+            line-height: 1.7;
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div class="header-logo">HABITURE</div>
+    <div class="header-title">Life-OS 錆つき診断</div>
+</div>
+
+<div id="app">
+    <div class="loading">
+        <div class="spinner"></div>
+        <p style="color:var(--muted);font-size:14px;">読み込み中...</p>
+    </div>
+</div>
+
+<script>
+const LIFF_ID = '2010367340-Koh4jxlx';
+
+const questions = [
+    '今の仕事を続けていても、これ以上の成長はあまり期待できないと感じる',
+    '毎日の業務が、ほぼ同じことの繰り返しに思える',
+    '以前よりも、仕事で新しい挑戦をしたい気持ちが弱くなっている',
+    '頑張っても、評価や役割が大きく変わるイメージが持てない',
+    '最近は「伸びている実感」より、「停滞している感覚」の方が強い',
+    'このまま今の生き方を続けていいのか、不安になることがある',
+    'ふと「別の人生もあったのでは」と考えることが増えた',
+    'これまでの選択が正しかったのか、迷うことがある',
+    '昔よりも「残り時間」や年齢を意識するようになった',
+    '仕事だけでなく、人生全体の意味や方向性を見失いやすい',
+    'どうせ頑張っても、状況は大きく変わらないと感じる',
+    '動いた方がいいと分かっていても、最初の一歩が出にくい',
+    '過去に何度か頑張った結果、今は期待しない方が楽だと感じる',
+    '何かを変えるより、諦めてやり過ごすことが増えた',
+    '自分の行動で、人生や仕事を良くできる感覚が弱くなっている',
+    '今の仕事に不満があっても、収入や条件を手放すのが怖い',
+    '生活費や固定費を考えると、大きく動く選択がしづらい',
+    '本当は別の働き方や生き方も考えたいが、現実的に難しいと感じる',
+    '辞めたい気持ちより、「失う怖さ」の方が強くなりやすい',
+    '今の場所に納得しているというより、離れられずにいる感覚がある'
+];
+
+const scaleLabels = [
+    { num: 0, text: 'あてはまらない' },
+    { num: 1, text: 'あまり\nあてはまらない' },
+    { num: 2, text: 'やや\nあてはまる' },
+    { num: 3, text: 'とても\nあてはまる' }
+];
+
+const typeMap = {
+    A: { name: 'キャリアプラトー', desc: '成長実感の薄さや仕事の停滞によって、少しずつ意欲が削られている可能性があります。\n同じことの繰り返しや、先の見えにくさが続くことで、前に進む手応えを持ちにくくなっている状態です。' },
+    B: { name: 'ミッドライフ・クライシス', desc: '仕事だけでなく、人生全体の方向性や意味を見直す時期に入っている可能性があります。\nそのため、「このままでいいのか」という感覚や、これまでの選択への迷いが強まりやすい状態です。' },
+    C: { name: '学習性無力感', desc: '意欲そのものが完全になくなっているわけではなく、「頑張っても変わらない」という感覚が積み重なって、動き出す力が弱っている可能性があります。\nやる気の問題というより、自分の行動で変えられる感覚が落ちている状態です。' },
+    D: { name: '経済的足かせ（黄金の手錠）', desc: '意欲がないというより、失う怖さや現実的な制約によって、動きにくくなっている可能性があります。\n本音では変化を望んでいても、収入や生活条件を守るものの大きさがブレーキになりやすい状態です。' }
+};
+
+const levelMap = [
+    { label: 'まだ軽度', max: 14, desc: '今はまだ、止まり切る前の段階です。\n早めに変えることで、無理なく立て直しやすい状況です。' },
+    { label: 'やや錆び', max: 29, desc: '少しずつ内側で錆びが進んでいるサインかもしれません。\n今のうちに手を打つことで、深く止まる前に流れを変えやすくなります。' },
+    { label: 'かなり錆び', max: 44, desc: '今はかなり内側で停滞が進んでいる可能性があります。\nひとりで気合いだけで立て直そうとするより、順番を整えて再始動した方が早い段階です。' },
+    { label: '重度の錆つき', max: 60, desc: 'かなり深いところで止まりが進んでいます。\nまずは自分を責めず、最初の一歩から立て直すことが何より大切です。' }
+];
+
+let currentQ = 0;
+let scores = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+let userId = null;
+
+async function initLiff() {
+    try {
+        await liff.init({ liffId: LIFF_ID });
+        const context = liff.getContext();
+        if (context && context.userId) {
+            userId = context.userId;
+        } else if (liff.isLoggedIn()) {
+            const profile = await liff.getProfile();
+            userId = profile.userId;
+        } else {
+            liff.login();
+            return;
+        }
+    } catch (e) {
+        userId = null;
+    }
+    showIntro();
+}
+
+function render(html) {
+    document.getElementById('app').innerHTML = html;
+}
+
+function showIntro() {
+    render(`
+        <div class="intro-wrap">
+            <p class="intro-body">
+                この診断では、<br>
+                今の<strong>錆つき度</strong>と<br>
+                <strong>止まりやすさの原因タイプ</strong><br>
+                がわかります。<br><br>
+                直感で、今の自分に近いものを選んでください。
+            </p>
+            <div class="intro-time">
+                <span class="intro-time-icon">⏱</span>
+                <span>所要時間：約3分<br>各設問について、今の自分にどのくらい当てはまるかを選んでください。</span>
+            </div>
+            <button class="start-btn" onclick="startQuiz()">診断スタート →</button>
+        </div>
+    `);
+}
+
+function startQuiz() {
+    currentQ = 0;
+    scores = new Array(20).fill(0);
+    showQuestion();
+}
+
+function showQuestion() {
+    const progress = (currentQ / questions.length) * 100;
+    render(`
+        <div class="progress-wrap">
+            <div class="progress-row">
+                <span class="progress-label">Q${currentQ + 1} / ${questions.length}</span>
+                <span class="progress-label">${Math.round(progress)}%</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" style="width:${progress}%"></div>
+            </div>
+        </div>
+        <div class="question-wrap">
+            <div class="question-num">Q U E S T I O N &nbsp; ${currentQ + 1}</div>
+            <div class="question-text">${questions[currentQ]}</div>
+            <div class="scale-labels">
+                ${scaleLabels.map(s => `<div class="scale-label-text">${s.text.replace('\n', '<br>')}</div>`).join('')}
+            </div>
+            <div class="scale-btns">
+                ${scaleLabels.map(s => `
+                    <button class="scale-btn" onclick="answer(${s.num})">
+                        <span class="scale-num">${s.num}</span>
+                    </button>
+                `).join('')}
+            </div>
+        </div>
+    `);
+}
+
+function answer(score) {
+    scores[currentQ] = score;
+    currentQ++;
+    if (currentQ < questions.length) {
+        showQuestion();
+    } else {
+        showResult();
+    }
+}
+
+function calcResult() {
+    const total = scores.reduce((a, b) => a + b, 0);
+    const A = scores.slice(0, 5).reduce((a, b) => a + b, 0);
+    const B = scores.slice(5, 10).reduce((a, b) => a + b, 0);
+    const C = scores.slice(10, 15).reduce((a, b) => a + b, 0);
+    const D = scores.slice(15, 20).reduce((a, b) => a + b, 0);
+
+    const level = levelMap.find(l => total <= l.max) || levelMap[levelMap.length - 1];
+
+    const subScores = [
+        { key: 'A', score: A },
+        { key: 'B', score: B },
+        { key: 'C', score: C },
+        { key: 'D', score: D }
+    ].sort((a, b) => b.score - a.score);
+
+    const mainType = typeMap[subScores[0].key];
+    const subType = typeMap[subScores[1].key];
+
+    return { total, level, mainType, subType };
+}
+
+function buildLineMessage(result) {
+    const { total, level, mainType, subType } = result;
+    return `診断ありがとうございます。
+あなたの錆つき度は「${level.label}」でした。
+主タイプは「${mainType.name}」、副タイプは「${subType.name}」です。
+
+あなたは今、${mainType.desc}
+
+${level.desc}
+
+必要なのは、気力ではなく「再始動の順番」です。
+
+▼次のステップ
+このLINEに
+【診断完了】
+と送ってください。
+送信後、止まった状態からもう一度小さく動き出すための「5日間・再始動講座」がスタートします。
+まずは、大きな変化ではなく最初の小さな一歩からで大丈夫です。`;
+}
+
+function showResult() {
+    const result = calcResult();
+    const { total, level, mainType, subType } = result;
+
+    render(`
+        <div class="result-wrap">
+            <div class="result-hero">
+                <div class="rust-level">錆つき度</div>
+                <div class="rust-score">総合スコア ${total} / 60</div>
+                <div class="rust-label">${level.label}</div>
+                <div class="type-divider">
+                    <div class="type-row">
+                        <div class="type-item">
+                            <div class="type-tag">主タイプ</div>
+                            <div class="type-name">${mainType.name}</div>
+                        </div>
+                        <div class="type-item">
+                            <div class="type-tag">副タイプ</div>
+                            <div class="type-name">${subType.name}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="result-card">
+                <div class="card-title">あなたの今の状態</div>
+                <p class="card-body" style="white-space:pre-line;">${mainType.desc}</p>
+            </div>
+
+            <div class="result-card">
+                <div class="card-title">錆つき度について</div>
+                <div class="level-box" style="white-space:pre-line;">${level.desc}</div>
+            </div>
+
+            <div class="result-card">
+                <div class="card-title">副タイプ</div>
+                <p class="card-body"><strong>${subType.name}</strong>の傾向も見られます。</p>
+            </div>
+        </div>
+
+        <div class="cta-wrap">
+            <p class="cta-note">
+                必要なのは、気力ではなく<br>
+                「再始動の順番」です。
+            </p>
+            <div style="text-align:center">
+                <div class="cta-highlight">【診断完了】</div>
+            </div>
+            <p class="cta-note">
+                診断結果をLINEに保存して、<br>
+                このLINEに <strong>【診断完了】</strong> と送ってください。<br>
+                5日間・再始動講座がスタートします。
+            </p>
+            <button id="cta-btn" class="cta-btn" onclick="sendResult()">
+                結果をLINEに保存して続きへ →
+            </button>
+            <div id="sent-status"></div>
+        </div>
+    `);
+}
+
+async function sendResult() {
+    const btn = document.getElementById('cta-btn');
+    const status = document.getElementById('sent-status');
+    btn.disabled = true;
+    btn.textContent = '送信中...';
+
+    const result = calcResult();
+    const message = buildLineMessage(result);
+
+    try {
+        if (liff.isInClient()) {
+            await liff.sendMessages([{ type: 'text', text: message }]);
+            status.innerHTML = '<div class="sent-msg">✅ LINEに結果を送りました！<br>このLINEに【診断完了】と送ると<br>5日間講座がスタートします。</div>';
+            setTimeout(() => {
+                try { liff.closeWindow(); } catch(e) {}
+            }, 2500);
+        } else {
+            status.innerHTML = '<div class="sent-msg" style="background:#fdf0f0;color:#c0392b">⚠ LINEアプリ内で開いてください。</div>';
+            btn.disabled = false;
+            btn.textContent = '結果をLINEに保存して続きへ →';
+        }
+    } catch (e) {
+        status.innerHTML = '<div class="sent-msg" style="background:#fdf0f0;color:#c0392b">⚠ 送信できませんでした。LINEに戻って【診断完了】と送ってください。</div>';
+        btn.disabled = false;
+        btn.textContent = '結果をLINEに保存して続きへ →';
+    }
+}
+
+initLiff();
+</script>
+</body>
+</html>
