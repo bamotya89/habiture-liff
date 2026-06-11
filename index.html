@@ -668,7 +668,6 @@ const results = {
 let currentQ = 0;
 let answers = { A: 0, B: 0, C: 0, D: 0 };
 let userId = null;
-let _dbg = '';
 
 // ============================================================
 // LIFF 初期化
@@ -756,9 +755,9 @@ function showQuestion() {
             <div class="question-num">Q U E S T I O N &nbsp; ${currentQ + 1}</div>
             <div class="question-text">${q.text}</div>
             <div class="choices">
-                ${q.choices.map(c => `
+                ${[...q.choices].sort(() => Math.random() - 0.5).map((c, i) => `
                     <button class="choice-btn" onclick="answer('${c.label}')">
-                        <span class="choice-label">${c.label}</span>
+                        <span class="choice-label">${i + 1}</span>
                         <span>${c.text}</span>
                     </button>
                 `).join('')}
@@ -873,8 +872,6 @@ async function sendAndClose(typeCode) {
 
     btn.disabled = true;
     btn.textContent = '送信中...';
-    // デバッグ用（確認後に削除）
-    alert('uid:' + (userId || 'null') + '\n' + _dbg);
 
     const sent = await sendResult(typeCode);
 
