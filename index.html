@@ -668,6 +668,7 @@ const results = {
 let currentQ = 0;
 let answers = { A: 0, B: 0, C: 0, D: 0 };
 let userId = null;
+let _dbg = '';
 
 // ============================================================
 // LIFF 初期化
@@ -675,16 +676,22 @@ let userId = null;
 async function initLiff() {
     try {
         await liff.init({ liffId: LIFF_ID });
-
-        // LINE内ブラウザならcontextから直接取得（profileスコープ不要）
+        const isInClient = liff.isInClient();
+        const isLoggedIn = liff.isLoggedIn();
         const context = liff.getContext();
+        _dbg = `inClient:${isInClient} loggedIn:${isLoggedIn} ctxType:${context?.type} ctxUid:${context?.userId}`;
+
         if (context && context.userId) {
             userId = context.userId;
-        } else if (liff.isLoggedIn()) {
+        } else if (isLoggedIn) {
             const profile = await liff.getProfile();
             userId = profile.userId;
+        } else {
+            liff.login();
+            return;
         }
     } catch (e) {
+        _dbg += ' err:' + e.message;
         userId = null;
     }
     showIntro();
@@ -867,7 +874,7 @@ async function sendAndClose(typeCode) {
     btn.disabled = true;
     btn.textContent = '送信中...';
     // デバッグ用（確認後に削除）
-    alert('userId: ' + (userId || 'null'));
+    alert('uid:' + (userId || 'null') + '\n' + _dbg);
 
     const sent = await sendResult(typeCode);
 
