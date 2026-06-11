@@ -863,6 +863,8 @@ async function sendAndClose(typeCode) {
 
     btn.disabled = true;
     btn.textContent = '送信中...';
+    // デバッグ用（確認後に削除）
+    alert('userId: ' + (userId || 'null'));
 
     const sent = await sendResult(typeCode);
 
