@@ -879,14 +879,17 @@ async function sendAndClose(typeCode) {
 }
 
 async function sendResult(typeCode) {
-    if (!userId || !GAS_URL || GAS_URL === 'YOUR_GAS_URL') return false;
+    if (!GAS_URL || GAS_URL === 'YOUR_GAS_URL') return false;
+    // userIdがnullの場合も送信試行（GAS側でエラー処理）
+    const body = new URLSearchParams({ userId: userId || '', typeCode });
     try {
-        const res = await fetch(GAS_URL, {
+        // form-data送信でCORSプリフライトを回避
+        await fetch(GAS_URL, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId, typeCode })
+            mode: 'no-cors',
+            body
         });
-        return res.ok;
+        return true;
     } catch (e) {
         return false;
     }
