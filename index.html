@@ -891,17 +891,12 @@ async function sendAndClose(typeCode) {
 }
 
 async function sendResult(typeCode) {
-    if (!GAS_URL || GAS_URL === 'YOUR_GAS_URL' || !userId) {
-        alert('sendResult abort: userId=' + userId);
-        return false;
-    }
+    if (!liff.isInClient()) return false;
     try {
-        const url = GAS_URL + '?userId=' + encodeURIComponent(userId) + '&typeCode=' + encodeURIComponent(typeCode);
-        const res = await fetch(url);
-        alert('status:' + res.status + ' ok:' + res.ok);
-        return res.ok;
+        const r = results[typeCode];
+        await liff.sendMessages([{ type: 'text', text: r.lineMessage }]);
+        return true;
     } catch (e) {
-        alert('fetch error: ' + e.message);
         return false;
     }
 }
